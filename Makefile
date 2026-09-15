@@ -1,5 +1,4 @@
-VERSION=0.1.6
-LDFLAGS=-ldflags "-w -s -X main.version=${VERSION}"
+VERSION=0.0.1
 all: check lint bench
 
 .PHONY: check lint bench
