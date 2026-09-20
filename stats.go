@@ -68,6 +68,9 @@ func (t *Sampdo) Append(point ...float64) error {
 
 // Count returns the number of points currently stored in the Sampdo instance.
 func (t *Sampdo) Count() int {
+	if t == nil {
+		return 0
+	}
 	return len(t.points)
 }
 
