@@ -219,3 +219,94 @@ func TestSampdoFrozenAppend(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, []float64{0.5, 1.0, 2.0, 3.0}, sorted2.points)
 }
+
+func TestSampdoCount(t *testing.T) {
+	t.Run("empty", func(t *testing.T) {
+		s := New()
+		require.Equal(t, 0, s.Count())
+	})
+
+	t.Run("after append", func(t *testing.T) {
+		s := New()
+		require.NoError(t, s.Append(1.0, 2.0, 3.0))
+		require.Equal(t, 3, s.Count())
+	})
+
+	t.Run("after sorted", func(t *testing.T) {
+		s := New()
+		require.NoError(t, s.Append(1.0, 2.0, 3.0))
+		sorted, err := s.Sorted()
+		require.NoError(t, err)
+		require.Equal(t, 3, sorted.Count())
+	})
+}
+
+func TestSampdoCopyTo(t *testing.T) {
+	t.Run("copies points", func(t *testing.T) {
+		s := New()
+		require.NoError(t, s.Append(1.0, 2.0, 3.0))
+		dst := make([]float64, 0, 3)
+		err := s.CopyTo(&dst)
+		require.NoError(t, err)
+		require.Equal(t, []float64{1.0, 2.0, 3.0}, dst)
+	})
+
+	t.Run("appends to existing slice", func(t *testing.T) {
+		s := New()
+		require.NoError(t, s.Append(4.0, 5.0))
+		dst := []float64{1.0, 2.0, 3.0}
+		err := s.CopyTo(&dst)
+		require.NoError(t, err)
+		require.Equal(t, []float64{1.0, 2.0, 3.0, 4.0, 5.0}, dst)
+	})
+
+	t.Run("nil destination", func(t *testing.T) {
+		s := New()
+		require.NoError(t, s.Append(1.0))
+		err := s.CopyTo(nil)
+		require.Error(t, err)
+	})
+
+	t.Run("nil underlying slice", func(t *testing.T) {
+		s := New()
+		require.NoError(t, s.Append(1.0))
+		var dst []float64
+		err := s.CopyTo(&dst)
+		require.Error(t, err)
+	})
+}
+
+func TestSampdoAppendTo(t *testing.T) {
+	t.Run("appends points", func(t *testing.T) {
+		s := New()
+		require.NoError(t, s.Append(1.0, 2.0, 3.0))
+		dst := New()
+		require.NoError(t, s.AppendTo(dst))
+		require.Equal(t, []float64{1.0, 2.0, 3.0}, dst.points)
+	})
+
+	t.Run("appends to existing points", func(t *testing.T) {
+		s := New()
+		require.NoError(t, s.Append(4.0, 5.0))
+		dst := New()
+		require.NoError(t, dst.Append(1.0, 2.0, 3.0))
+		require.NoError(t, s.AppendTo(dst))
+		require.Equal(t, []float64{1.0, 2.0, 3.0, 4.0, 5.0}, dst.points)
+		require.Equal(t, 15.0, dst.sum)
+	})
+
+	t.Run("nil destination", func(t *testing.T) {
+		s := New()
+		require.NoError(t, s.Append(1.0))
+		err := s.AppendTo(nil)
+		require.Error(t, err)
+	})
+
+	t.Run("preserves sum", func(t *testing.T) {
+		s := New()
+		require.NoError(t, s.Append(1.0, 2.0, 3.0))
+		dst := New()
+		require.NoError(t, s.AppendTo(dst))
+		require.Equal(t, 6.0, dst.sum)
+	})
+}
