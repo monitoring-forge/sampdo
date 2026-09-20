@@ -66,6 +66,29 @@ func (t *Sampdo) Append(point ...float64) error {
 	return nil
 }
 
+// Count returns the number of points currently stored in the Sampdo instance.
+func (t *Sampdo) Count() int {
+	return len(t.points)
+}
+
+// CopyTo copies all points from the current Sampdo instance to the provided destination slice.
+func (t *Sampdo) CopyTo(dst *[]float64) error {
+	if dst == nil || *dst == nil {
+		return fmt.Errorf("destination slice is nil")
+	}
+	*dst = append(*dst, t.points...)
+	return nil
+}
+
+// AppendTo appends all points from the current Sampdo instance to the destination Sampdo instance.
+func (t *Sampdo) AppendTo(dst *Sampdo) error {
+	if dst == nil {
+		return fmt.Errorf("destination is nil")
+	}
+	dst.Append(t.points...)
+	return nil
+}
+
 func (t *Sampdo) Sorted() (*Sorted, error) {
 	if t == nil {
 		return nil, fmt.Errorf("sorted is nil")
