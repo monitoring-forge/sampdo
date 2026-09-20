@@ -76,6 +76,9 @@ func (t *Sampdo) Count() int {
 
 // CopyTo copies all points from the current Sampdo instance to the provided destination slice.
 func (t *Sampdo) CopyTo(dst *[]float64) error {
+	if t == nil {
+		return fmt.Errorf("source is nil")
+	}
 	if dst == nil || *dst == nil {
 		return fmt.Errorf("destination slice is nil")
 	}
@@ -85,6 +88,9 @@ func (t *Sampdo) CopyTo(dst *[]float64) error {
 
 // AppendTo appends all points from the current Sampdo instance to the destination Sampdo instance.
 func (t *Sampdo) AppendTo(dst *Sampdo) error {
+	if t == nil {
+		return fmt.Errorf("source is nil")
+	}
 	if dst == nil {
 		return fmt.Errorf("destination is nil")
 	}
