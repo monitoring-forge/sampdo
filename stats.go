@@ -85,8 +85,7 @@ func (t *Sampdo) AppendTo(dst *Sampdo) error {
 	if dst == nil {
 		return fmt.Errorf("destination is nil")
 	}
-	dst.Append(t.points...)
-	return nil
+	return dst.Append(t.points...)
 }
 
 func (t *Sampdo) Sorted() (*Sorted, error) {
