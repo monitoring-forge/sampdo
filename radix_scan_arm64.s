@@ -1,0 +1,72 @@
+//go:build !purego && !race
+
+#include "textflag.h"
+
+// Reduce key differences and adjacent inversions, eight keys at a time.
+TEXT ·radixScan(SB), NOSPLIT, $0-33
+	MOVD points_base+0(FP), R0
+	MOVD points_len+8(FP), R1
+	MOVD $0, R2
+	MOVD $0, R3
+	CBZ R1, done
+	MOVD (R0), R4
+	VDUP R4, V0.D2
+	VMOV V0.B16, V1.B16
+	VEOR V2.B16, V2.B16, V2.B16
+	VEOR V3.B16, V3.B16, V3.B16
+	CMP $8, R1
+	BLT tail
+loop:
+	VLD1.P 64(R0), [V4.D2, V5.D2, V6.D2, V7.D2]
+	VEXT $8, V4.B16, V1.B16, V8.B16
+	VEXT $8, V5.B16, V4.B16, V9.B16
+	VEXT $8, V6.B16, V5.B16, V10.B16
+	VEXT $8, V7.B16, V6.B16, V11.B16
+	VCMHI V4.D2, V8.D2, V8.D2
+	VCMHI V5.D2, V9.D2, V9.D2
+	VCMHI V6.D2, V10.D2, V10.D2
+	VCMHI V7.D2, V11.D2, V11.D2
+	VORR V8.B16, V9.B16, V8.B16
+	VORR V10.B16, V11.B16, V10.B16
+	VORR V8.B16, V10.B16, V8.B16
+	VORR V8.B16, V3.B16, V3.B16
+	VMOV V7.B16, V1.B16
+	VEOR V0.B16, V4.B16, V4.B16
+	VEOR V0.B16, V5.B16, V5.B16
+	VEOR V0.B16, V6.B16, V6.B16
+	VEOR V0.B16, V7.B16, V7.B16
+	VORR V4.B16, V5.B16, V4.B16
+	VORR V6.B16, V7.B16, V6.B16
+	VORR V4.B16, V6.B16, V4.B16
+	VORR V4.B16, V2.B16, V2.B16
+	SUB $8, R1
+	CMP $8, R1
+	BGE loop
+	VMOV V2.D[0], R2
+	VMOV V2.D[1], R5
+	ORR R5, R2, R2
+	VMOV V3.D[0], R3
+	VMOV V3.D[1], R5
+	ORR R5, R3, R3
+	VMOV V1.D[1], R6
+	B tailCheck
+tail:
+	MOVD R4, R6
+tailCheck:
+	CBZ R1, done
+tailLoop:
+	MOVD.P 8(R0), R5
+	EOR R4, R5, R7
+	ORR R7, R2, R2
+	CMP R6, R5
+	CSET LO, R7
+	ORR R7, R3, R3
+	MOVD R5, R6
+	SUB $1, R1
+	CBNZ R1, tailLoop
+done:
+	MOVD R2, varying+24(FP)
+	CMP $0, R3
+	CSET EQ, R3
+	MOVB R3, ordered+32(FP)
+	RET
