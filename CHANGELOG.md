@@ -1,5 +1,9 @@
 # Changelog
 
+## [v0.0.3](https://github.com/monitoring-forge/sampdo/compare/v0.0.2...v0.0.3) - 2026-09-22
+
+- optimize radixsort with simd by @kazeburo in https://github.com/monitoring-forge/sampdo/pull/8
+
 ## [v0.0.2](https://github.com/monitoring-forge/sampdo/compare/v0.0.1...v0.0.2) - 2026-09-20
 
 - CopyTo and AppendTo by @kazeburo in https://github.com/monitoring-forge/sampdo/pull/6
