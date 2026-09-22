@@ -7,10 +7,40 @@
 ## Features / 特徴
 
 - **Sort-based aggregation / ソートベースの集計**: Compute several statistics from a single sort. サンプルを 1 回ソートするだけで複数の統計量を取得できます。
-- **Radix sort for non-negative numbers / 非負数向け基数ソート**: Falls back to `slices.Sort` only when negative or `-0` values are present. 負数や `-0` がある場合のみ `slices.Sort` にフォールバックします。
+- **Radix sort for non-negative numbers / 非負数向け基数ソート**: Uses `slices.Sort` for small inputs, negative values, or `-0`. 小さい入力、負数や `-0` を含む入力では `slices.Sort` を使用します。
 - **NaN rejection / NaN を排除**: `Append` rejects `NaN` so results stay stable. `Append` は `NaN` を弾き、集計結果を安定させます。
 - **Immutable sorted view / イミュータブルなソート結果**: Appending after `Sorted()` does not mutate the returned `*Sorted`. `Sorted()` 後に追加しても返された `*Sorted` は影響を受けません。
 - **Infinity support / 無限大対応**: Handles `+Inf` and `-Inf` in percentile calculations. `+Inf`、`-Inf` を含むデータのパーセンタイル計算にも対応しています。
+
+### Radix sort implementation / 基数ソートの実装
+
+The key scan checks ordering and finds varying key bits using ARM64 NEON or
+amd64 SSE2. Other architectures, `-tags=purego`, and race builds use the portable
+Go implementation. No additional dependencies or experimental build flags are required.
+
+事前走査では ARM64 NEON / amd64 SSE2 を使い、整列状態と値が異なるビットをまとめて調べます。
+その他のアーキテクチャ、`-tags=purego`、race ビルドでは純 Go 実装を使います。
+追加の依存パッケージや実験的なビルドフラグは不要です。
+
+Large inputs normally use six 11-bit LSD passes, with all histograms collected in
+one traversal and constant digits skipped. Small inputs and sampled distributions
+with many repeated full-width keys use an MSD partitioning path, which can stop
+at equal buckets. Sampling only selects the algorithm; all keys are sorted exactly.
+Both paths reuse one scratch slice and write the result into the original input.
+Already ordered inputs of at least 512 elements return without a scratch allocation.
+Descending inputs (including equal neighbors) are confirmed in a linear scan and
+reversed in place, avoiding radix passes and scratch allocation. The endpoint
+check skips this extra scan for ascending and equal inputs, and unordered inputs
+stop it at the first ascending pair.
+
+大きい入力は通常、全桁の度数を一度に集計する最大 6 パスの 11 ビット LSD 方式で処理し、
+値が変わらない桁は省略します。小さい入力や、広いビット範囲にわたる値の重複が多い入力では
+MSD 方式を使い、同じ値だけの区画の処理を打ち切ります。サンプリングは方式選択のみに使い、
+ソート結果は全要素について厳密です。作業配列は 1 個を再利用し、結果は元の配列に書き戻します。
+512 要素以上の整列済み入力では作業配列を確保しません。
+降順の入力は、同じ値の連続も許して全体を確認し、その場で反転します。
+基数ソートや作業配列の確保は不要です。昇順・全要素同値の入力では端点の比較で
+降順チェックを省略し、未整列の入力では昇順の隣接ペアが見つかった時点で打ち切ります。
 
 ## Installation / インストール
 
@@ -124,11 +154,18 @@ Run benchmarks with:
 
 ```bash
 go test -bench BenchmarkSampdoAll -benchmem -benchtime=100ms -count 10 -run '^$' .
+go test -bench BenchmarkSortDistributions -benchmem -benchtime=100ms -count 6 -run '^$' .
+go test -bench BenchmarkRadixScan -benchmem -benchtime=100ms -run '^$' .
 ```
+
+`BenchmarkSortDistributions` includes an identical input-reset copy for each algorithm;
+input generation is excluded. See [BENCHMARKS.md](BENCHMARKS.md) for before/after results.
+
+`BenchmarkSortDistributions` は各方式に同じ入力復元コピーを含め、入力生成は計測から除外します。
+変更前後の実測値は [BENCHMARKS.md](BENCHMARKS.md) を参照してください。
 
 ## License / ライセンス
 
 This project is licensed under the [MIT License](LICENSE).
 
 本プロジェクトは [MIT ライセンス](LICENSE) の下で提供されています。
-

@@ -70,7 +70,7 @@ func TestSortedMedian(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Sorted{points: tt.pts}
 			median, err := s.Median()
-			if tt.pts == nil || len(tt.pts) == 0 {
+			if len(tt.pts) == 0 {
 				require.Error(t, err)
 				return
 			}
@@ -239,7 +239,7 @@ func TestRadixSortExtremeValues(t *testing.T) {
 	for i := range points {
 		points[i] = extremes[i%len(extremes)]
 	}
-	require.Equal(t, aliasSlicesSort(points), radixSort(points))
+	checkRadixInPlace(t, points)
 }
 
 func radixInput(n int, distribution string) []float64 {
@@ -253,6 +253,12 @@ func radixInput(n int, distribution string) []float64 {
 			points[i] = r.Float64() * 10000
 		case "wide":
 			points[i] = math.Float64frombits(r.Uint64() & 0x7fefffffffffffff)
+		case "reverse_duplicates":
+			points[i] = float64((n - 1 - i) / 8)
+		case "reverse":
+			points[i] = float64(n - i)
+		case "nearly_sorted":
+			points[i] = float64(i ^ 1)
 		case "sorted":
 			points[i] = float64(i)
 		case "equal":
