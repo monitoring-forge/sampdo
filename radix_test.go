@@ -148,3 +148,39 @@ func TestRadixSortOrderedAllocs(t *testing.T) {
 		require.Zero(t, testing.AllocsPerRun(10, func() { radixSort(points) }), distribution)
 	}
 }
+
+func TestRadixSortDescending(t *testing.T) {
+	for _, n := range []int{0, 1, 511, 512, 513, 2048, 2049, 100000} {
+		for _, distribution := range []string{"reverse", "reverse_duplicates"} {
+			points := radixInput(n, distribution)
+			checkRadixInPlace(t, points)
+			work := make([]float64, n)
+			require.Zero(t, testing.AllocsPerRun(10, func() {
+				copy(work, points)
+				radixSort(work)
+			}), "%s/%d", distribution, n)
+		}
+	}
+	points := make([]float64, 1025)
+	values := []float64{math.Inf(1), math.MaxFloat64, 1, math.SmallestNonzeroFloat64, 0}
+	for i := range points {
+		points[i] = values[i%len(values)]
+	}
+	slices.Sort(points)
+	slices.Reverse(points)
+	checkRadixInPlace(t, points)
+}
+
+func TestRadixSortAlmostDescending(t *testing.T) {
+	// Every possible ascending pair within a descending input, including a pair
+	// at the end, must prevent the reversal-only path from returning early.
+	for i := range 512 {
+		points := radixInput(513, "reverse")
+		points[i], points[i+1] = points[i+1], points[i]
+		checkRadixInPlace(t, points)
+	}
+	// Equal endpoints can also enclose an unordered interior.
+	points := radixInput(2049, "reverse")
+	points[0] = points[len(points)-1]
+	checkRadixInPlace(t, points)
+}

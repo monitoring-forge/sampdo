@@ -56,7 +56,7 @@ func BenchmarkSortDistributions(b *testing.B) {
 		{"slices", aliasSlicesSort}, {"radix", radixSort},
 	} {
 		for _, n := range []int{512, 1000, 2048, 4096, 10_000, 100_000, 1_000_000} {
-			for _, distribution := range []string{"duplicates", "random", "wide", "sorted", "reverse", "equal", "response_time"} {
+			for _, distribution := range []string{"duplicates", "random", "wide", "sorted", "reverse", "reverse_duplicates", "equal", "response_time"} {
 				{
 					b.Run(fmt.Sprintf("%s/%d/%s", algorithm.name, n, distribution), func(b *testing.B) {
 						input := radixInput(n, distribution)

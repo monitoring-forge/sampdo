@@ -14,7 +14,7 @@
 
 ### Radix sort implementation / 基数ソートの実装
 
-The initial scan checks ordering and finds varying key bits using ARM64 NEON or
+The key scan checks ordering and finds varying key bits using ARM64 NEON or
 amd64 SSE2. Other architectures, `-tags=purego`, and race builds use the portable
 Go implementation. No additional dependencies or experimental build flags are required.
 
@@ -28,12 +28,19 @@ with many repeated full-width keys use an MSD partitioning path, which can stop
 at equal buckets. Sampling only selects the algorithm; all keys are sorted exactly.
 Both paths reuse one scratch slice and write the result into the original input.
 Already ordered inputs of at least 512 elements return without a scratch allocation.
+Descending inputs (including equal neighbors) are confirmed in a linear scan and
+reversed in place, avoiding radix passes and scratch allocation. The endpoint
+check skips this extra scan for ascending and equal inputs, and unordered inputs
+stop it at the first ascending pair.
 
 大きい入力は通常、全桁の度数を一度に集計する最大 6 パスの 11 ビット LSD 方式で処理し、
 値が変わらない桁は省略します。小さい入力や、広いビット範囲にわたる値の重複が多い入力では
 MSD 方式を使い、同じ値だけの区画の処理を打ち切ります。サンプリングは方式選択のみに使い、
 ソート結果は全要素について厳密です。作業配列は 1 個を再利用し、結果は元の配列に書き戻します。
 512 要素以上の整列済み入力では作業配列を確保しません。
+降順の入力は、同じ値の連続も許して全体を確認し、その場で反転します。
+基数ソートや作業配列の確保は不要です。昇順・全要素同値の入力では端点の比較で
+降順チェックを省略し、未整列の入力では昇順の隣接ペアが見つかった時点で打ち切ります。
 
 ## Installation / インストール
 
@@ -162,4 +169,3 @@ input generation is excluded. See [BENCHMARKS.md](BENCHMARKS.md) for before/afte
 This project is licensed under the [MIT License](LICENSE).
 
 本プロジェクトは [MIT ライセンス](LICENSE) の下で提供されています。
-

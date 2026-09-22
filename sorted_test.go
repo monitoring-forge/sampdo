@@ -253,6 +253,8 @@ func radixInput(n int, distribution string) []float64 {
 			points[i] = r.Float64() * 10000
 		case "wide":
 			points[i] = math.Float64frombits(r.Uint64() & 0x7fefffffffffffff)
+		case "reverse_duplicates":
+			points[i] = float64((n - 1 - i) / 8)
 		case "reverse":
 			points[i] = float64(n - i)
 		case "nearly_sorted":

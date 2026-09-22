@@ -14,6 +14,12 @@ func radixSort(points []float64) []float64 {
 		slices.Sort(points)
 		return points
 	}
+	// A descending input only needs a reversal. Check the endpoints first so
+	// ascending/equal inputs avoid this scan; unordered inputs exit it early.
+	if points[0] > points[len(points)-1] && radixDescending(points) {
+		slices.Reverse(points)
+		return points
+	}
 	varying, ordered := radixScan(points)
 	if ordered {
 		return points
@@ -28,6 +34,17 @@ func radixSort(points []float64) []float64 {
 		radixSortLSD(points, scratch, varying)
 	}
 	return points
+}
+
+// Equal neighbors are allowed. Confirm the entire input before reversing it:
+// a descending prefix or descending endpoints alone are not sufficient.
+func radixDescending(points []float64) bool {
+	for i := 1; i < len(points); i++ {
+		if points[i] > points[i-1] {
+			return false
+		}
+	}
+	return true
 }
 
 // Sample 512 evenly spaced keys without allocating (len(points) >= 2048).
