@@ -1,8 +1,8 @@
 # sampdo
 
-`sampdo` is a lightweight statistical aggregation library for Go. It collects a large number of `float64` samples and efficiently computes minimum, maximum, mean, median, and arbitrary percentiles from a sorted view. For non-negative values it uses radix sort, which is faster than a comparison sort.
+`sampdo` is a lightweight statistical aggregation library for Go. It collects a large number of `float64` samples and efficiently computes minimum, maximum, mean, median, population/sample standard deviation, and arbitrary percentiles from a sorted view. For non-negative values it uses radix sort, which is faster than a comparison sort.
 
-`sampdo` は Go 用の軽量な数値集計ライブラリです。大量の `float64` サンプルに対して、ソート済みの状態から最小値・最大値・平均値・中央値・任意のパーセンタイルを効率的に取得できます。非負数に対しては基数ソートを使い、比較ソートより高速に集計できます。
+`sampdo` は Go 用の軽量な数値集計ライブラリです。大量の `float64` サンプルに対して、ソート済みの状態から最小値・最大値・平均値・中央値・母標準偏差・標本標準偏差・任意のパーセンタイルを効率的に取得できます。非負数に対しては基数ソートを使い、比較ソートより高速に集計できます。
 
 ## Features / 特徴
 
@@ -107,8 +107,44 @@ P99    : 9.91
 | `Min()` | Smallest value; returns `0` when empty. | 最小値。空の場合は `0`。 |
 | `Max()` | Largest value; returns `0` when empty. | 最大値。空の場合は `0`。 |
 | `Mean()` | Arithmetic mean; sums in input order. Returns `0` when empty. | 算術平均。入力順に合計し、空の場合は `0`。 |
+| `PopulationStdDev()` | Population standard deviation, divisor n. | 母標準偏差。分母は n。 |
+| `SampleStdDev()` | Sample standard deviation, divisor n-1; requires two points. | 標本標準偏差。分母は n-1。2件以上が必要。 |
 | `Median()` | 50th percentile; averages the two middle values for an even count. | 50 パーセンタイル。要素数が偶数の場合は中央 2 値の平均。 |
 | `Percentile(p)` | Returns the `p`th percentile (0–100) using linear interpolation; returns `0` for out-of-range `p`. | `p` パーセンタイル（0〜100）を線形補間で返す。範囲外は `0`。 |
+
+### Standard deviation / 標準偏差
+
+```go
+population, err := sorted.PopulationStdDev()
+if err != nil {
+    log.Fatal(err)
+}
+sample, err := sorted.SampleStdDev()
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Printf("Population: %.6f, Sample: %.6f\n", population, sample)
+// For samples 1 through 10: Population: 2.872281, Sample: 3.027650
+```
+
+`PopulationStdDev()` computes `sqrt(sum((x - mean)^2) / n)`;
+`SampleStdDev()` computes `sqrt(sum((x - mean)^2) / (n - 1))`.
+Both return `(float64, error)` in the same units as the input, using O(n) time
+and O(1) extra space per call. Calculations center and scale the values to reduce
+rounding errors and avoid intermediate overflow/underflow.
+
+`PopulationStdDev()` は母標準偏差（分母 `n`）、`SampleStdDev()` は標本標準偏差
+（分母 `n-1`、不偏分散の平方根）を返します。戻り値は `(float64, error)` で、
+標準偏差の単位は入力と同じです。呼び出しごとに O(n) 時間・O(1) 追加メモリで計算します。
+値の中心を移動してスケールを調整し、丸め誤差や中間計算のオーバーフロー・アンダーフローを抑えます。
+
+- Empty views return `0, ErrNoPoints` for both methods.
+  空の `Sorted` は、どちらも `0, ErrNoPoints` を返します。
+- A single finite point has population standard deviation `0`; sample standard
+  deviation returns `0, ErrInsufficientPoints` for any single point.
+  有限値1件の母標準偏差は `0`。標本標準偏差は値によらず1件では `0, ErrInsufficientPoints` です。
+- With sufficient points, any infinity yields `NaN, nil`.
+  必要な件数を満たしていて無限大を含む場合は `NaN, nil` を返します。
 
 ### How percentiles are calculated / パーセンタイルの計算方法
 
