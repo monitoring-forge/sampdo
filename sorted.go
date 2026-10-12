@@ -8,6 +8,9 @@ import (
 var ErrNoPoints = errors.New("no points available")
 var ErrInvalidPercentile = errors.New("invalid percentile")
 
+// ErrInsufficientPoints indicates that sample standard deviation needs at least two points.
+var ErrInsufficientPoints = errors.New("at least two points required")
+
 type Sorted struct {
 	points   []float64
 	sum      float64
@@ -44,6 +47,59 @@ func (s *Sorted) Mean() (float64, error) {
 		sum += v
 	}
 	return sum / float64(len(s.points)), nil
+}
+
+// PopulationStdDev returns the population standard deviation (divisor n).
+// Empty input returns 0 and ErrNoPoints. Input containing infinity returns NaN.
+func (s *Sorted) PopulationStdDev() (float64, error) {
+	return s.stdDev(0)
+}
+
+// SampleStdDev returns the sample standard deviation (divisor n-1).
+// Empty input returns 0 and ErrNoPoints; one point returns 0 and
+// ErrInsufficientPoints. Otherwise, input containing infinity returns NaN.
+func (s *Sorted) SampleStdDev() (float64, error) {
+	return s.stdDev(1)
+}
+
+func (s *Sorted) stdDev(correction int) (float64, error) {
+	n := len(s.points)
+	if n == 0 {
+		return 0, ErrNoPoints
+	}
+	if n <= correction {
+		return 0, ErrInsufficientPoints
+	}
+	low, high := s.points[0], s.points[n-1]
+	if math.IsInf(low, 0) || math.IsInf(high, 0) {
+		return math.NaN(), nil
+	}
+	if low == high {
+		return 0, nil
+	}
+	// Center before scaling to preserve small differences on a large offset.
+	// Halving the endpoints first avoids overflow for extreme finite inputs.
+	center := low/2 + high/2
+	scale := math.Max(math.Abs(low-center), math.Abs(high-center))
+	// Compensate the sum of normalized offsets; the cached input-order sum
+	// can overflow or lose the very differences needed by this calculation.
+	sum, compensation := 0.0, 0.0
+	for _, v := range s.points {
+		y := (v-center)/scale - compensation
+		next := sum + y
+		compensation = (next - sum) - y
+		sum = next
+	}
+	mean := sum / float64(n)
+	squares, compensation := 0.0, 0.0
+	for _, v := range s.points {
+		d := (v-center)/scale - mean
+		y := d*d - compensation
+		next := squares + y
+		compensation = (next - squares) - y
+		squares = next
+	}
+	return scale * math.Sqrt(squares/float64(n-correction)), nil
 }
 
 func (s *Sorted) Median() (float64, error) {

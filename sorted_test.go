@@ -38,6 +38,97 @@ func TestSortedBasic(t *testing.T) {
 
 }
 
+func TestSortedStdDev(t *testing.T) {
+	tests := []struct {
+		name               string
+		points             []float64
+		population, sample float64
+	}{
+		{"textbook", []float64{2, 4, 4, 4, 5, 5, 7, 9}, 2, math.Sqrt(32.0 / 7)},
+		{"negative", []float64{-5, -3, -1}, math.Sqrt(8.0 / 3), 2},
+		{"mixed", []float64{-1, 0, 1}, math.Sqrt(2.0 / 3), 1},
+		{"constant", []float64{42, 42, 42}, 0, 0},
+		{"zeros", []float64{math.Copysign(0, -1), 0}, 0, 0},
+		{"large offset", []float64{1e16, 1e16 + 2, 1e16 + 4}, math.Sqrt(8.0 / 3), 2},
+		{"large magnitude", []float64{-1e200, 1e200}, 1e200, math.Sqrt2 * 1e200},
+		{"small magnitude", []float64{-1e-200, 1e-200}, 1e-200, math.Sqrt2 * 1e-200},
+		{"overflowing sum", []float64{math.MaxFloat64, math.MaxFloat64}, 0, 0},
+		{"extreme range", []float64{-math.MaxFloat64, math.MaxFloat64}, math.MaxFloat64, math.Inf(1)},
+		{"subnormal", []float64{0, 2 * math.SmallestNonzeroFloat64}, math.SmallestNonzeroFloat64, math.SmallestNonzeroFloat64},
+		{"positive infinity", []float64{1, math.Inf(1)}, math.NaN(), math.NaN()},
+		{"negative infinity", []float64{math.Inf(-1), 1}, math.NaN(), math.NaN()},
+		{"both infinities", []float64{math.Inf(-1), math.Inf(1)}, math.NaN(), math.NaN()},
+		{"equal infinities", []float64{math.Inf(1), math.Inf(1)}, math.NaN(), math.NaN()},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			data := New()
+			require.NoError(t, data.Append(tt.points...))
+			sorted, err := data.Sorted()
+			require.NoError(t, err)
+			for _, view := range []*Sorted{sorted, {points: slices.Clone(sorted.points)}} {
+				population, err := view.PopulationStdDev()
+				require.NoError(t, err)
+				sample, err := view.SampleStdDev()
+				require.NoError(t, err)
+				for i, got := range []float64{population, sample} {
+					want := []float64{tt.population, tt.sample}[i]
+					switch {
+					case math.IsNaN(want):
+						require.True(t, math.IsNaN(got))
+					case want == 0 || math.IsInf(want, 0) || math.Abs(want) < 1e-300:
+						require.Equal(t, want, got)
+					default:
+						require.InEpsilon(t, want, got, 1e-14)
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestSortedStdDevSmallInputs(t *testing.T) {
+	s := &Sorted{}
+	got, err := s.PopulationStdDev()
+	require.ErrorIs(t, err, ErrNoPoints)
+	require.Zero(t, got)
+	got, err = s.SampleStdDev()
+	require.ErrorIs(t, err, ErrNoPoints)
+	require.Zero(t, got)
+	for _, point := range []float64{42, math.MaxFloat64, math.Inf(1)} {
+		s = &Sorted{points: []float64{point}}
+		got, err = s.PopulationStdDev()
+		require.NoError(t, err)
+		if math.IsInf(point, 0) {
+			require.True(t, math.IsNaN(got))
+		} else {
+			require.Zero(t, got)
+		}
+		got, err = s.SampleStdDev()
+		require.ErrorIs(t, err, ErrInsufficientPoints)
+		require.Zero(t, got)
+	}
+}
+
+func TestSortedStdDevFrozenView(t *testing.T) {
+	data := New()
+	require.NoError(t, data.Append(3, 1))
+	before, err := data.Sorted()
+	require.NoError(t, err)
+	require.NoError(t, data.Append(5))
+	after, err := data.Sorted()
+	require.NoError(t, err)
+	got, err := before.PopulationStdDev()
+	require.NoError(t, err)
+	require.Equal(t, 1.0, got)
+	got, err = before.SampleStdDev()
+	require.NoError(t, err)
+	require.Equal(t, math.Sqrt2, got)
+	got, err = after.SampleStdDev()
+	require.NoError(t, err)
+	require.Equal(t, 2.0, got)
+}
+
 func TestSortedMedian(t *testing.T) {
 	tests := []struct {
 		name string
