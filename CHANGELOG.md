@@ -1,5 +1,9 @@
 # Changelog
 
+## [v0.0.5](https://github.com/monitoring-forge/sampdo/compare/v0.0.4...v0.0.5) - 2026-10-14
+
+- ci: bump Songmu/tagpr from 1.21.1 to 1.21.2 in the tagpr group by @dependabot[bot] in https://github.com/monitoring-forge/sampdo/pull/16
+
 ## [v0.0.4](https://github.com/monitoring-forge/sampdo/compare/v0.0.3...v0.0.4) - 2026-10-12
 
 - ci: bump the dependencies group across 1 directory with 2 updates by @dependabot[bot] in https://github.com/monitoring-forge/sampdo/pull/11
