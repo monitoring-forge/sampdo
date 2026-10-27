@@ -1,5 +1,12 @@
 # Changelog
 
+## [v0.0.5](https://github.com/monitoring-forge/sampdo/compare/v0.0.4...v0.0.5) - 2026-10-27
+
+- ci: bump Songmu/tagpr from 1.21.1 to 1.21.2 in the tagpr group by @dependabot[bot] in https://github.com/monitoring-forge/sampdo/pull/16
+- ci: bump actions/create-github-app-token from 3.2.0 to 3.3.0 in the dependencies group by @dependabot[bot] in https://github.com/monitoring-forge/sampdo/pull/18
+- Sync files with `monitoring-forge/github-common` by @monitoring-forge-files-sync-action[bot] in https://github.com/monitoring-forge/sampdo/pull/19
+- ci: bump Songmu/tagpr from 1.21.2 to 1.21.3 in the tagpr group by @dependabot[bot] in https://github.com/monitoring-forge/sampdo/pull/20
+
 ## [v0.0.4](https://github.com/monitoring-forge/sampdo/compare/v0.0.3...v0.0.4) - 2026-10-12
 
 - ci: bump the dependencies group across 1 directory with 2 updates by @dependabot[bot] in https://github.com/monitoring-forge/sampdo/pull/11
